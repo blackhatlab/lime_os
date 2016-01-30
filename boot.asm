@@ -6,79 +6,102 @@ start:
    mov ax, cs
    mov ds, ax
    mov si, hw
-cld
-   mov ah, 0x0E
+   cld
+   mov ah, 0x0e
    mov bh, 0
-   jmp print
-print:
-   mov al, 0
-   lodsb
-   test al, al
-   jz input
-   int 10h
-   jmp print
 
-input:
-   mov ah, 0
-   int 16h
-   cmp ah, 0Eh
-   cmp ah, 1Ch
-   jz check
-   jz backspace
-   mov ah, 0x0E
-   mov bh, 0
+t_looper_func:
+   lodsb
+   cmp al, 0
+   jz ent
    int 10h
-   mov [under], al
-   mov al, 1
-   add [bg], al
-   jmp input
+   jmp t_looper_func
+   
+ent:
+   mov edi, keyDown
+   mov di, 0
+   cld
+
+down_key_press:
+   mov ah, 0h
+   int 16h
+   cmp ah, 0x0e
+   jz backspace
+   cmp ah, 0x1c
+   jz input
+   mov ah, 0x0e
+   int 10h
+   inc dl
+   stosb
+   jmp down_key_press
 
 backspace:
-  mov ah, 0x0E
-  mov bh, 0
-  mov al, 8
-  int 10h
-   
-  mov ah, 0x0E
-  mov bh, 0
-  mov al, 0
-  int 10h
+   cmp dl, 0
+   jz down_key_press
+   mov ah, 0x0e
+   mov al, 8
+   int 10h
+   mov al, 0
+   int 10h
+   mov al, 8
+   int 10h
+   dec dl
+   mov dh, 0
+   mov esi, keyDown
+   mov edi, keyDown
+   mov al, 0
+   mov ah, dl
+   rep movsb
+   jmp down_key_press
+input:
+   mov esi, command_not_found
+   cld
+   mov ah, 0x0e
+   mov al, 13
+   int 10h
+   mov al, 10
+   int 10h
+input_loop:
+   lodsb
+   cmp al, 0
+   jz input_end
+   int 10h
+   jmp imput_loop
 
-  mov ah, 0x0E
-  mov bh, 0
-  mov al, 8
-  int 10h
-   
-  mov al, 1
-  sub [bg], al
+input_end:
+   mov esi, keyDown
+   cld
+   mov ah, 0x0e
+   mov dh, 0
 
-  jmp input
+input_text:
+   lodsb
+   cmp dh, dl
+   jz input_loop
+   inc dh
+   int 10h
+   jmp input_text
 
-check:
-  mov al, [under]
-  cmp al, 'h'
-  jz help_code
-cld
-  mov si, command_not_found
-  mov ah, 0x0E
-  mov bh, 0
-  jmp print
+input_noloop_end:
+   mov edi, keyDown
+   mov dl, 0h
+   mov al, 13
+   mov ah, 0x0e
+   int 10h
+   mov al, 10
+   int 10h
+   jmp down_key_press
 
-help_code:
-  mov ah, 0x0E
-  mov bh, 0
-  mov si, help_text
-cld
-  mov ah, 0x0E
-  mov bh, 0
-  jmp print
-
-jmp input
+fuck_off:
+  mov ax, 5307h
+  xor bx, bx
+  inc bx
+  mov cx, 3
+  int 15h
 
 section .data
 hw db 'LimeOS v0.1 ALPHA',10,13
-bg db 0
-under db 0
+keyDown db 0
 selector db 10,13,'>>> ',0
 command_not_found db 10,13,'Error! Command not found',10,13
 help_text db 10, 13, '1. reboot - reboot your PC, 2. shutdown - off your PC',10,13
